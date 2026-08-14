@@ -1,0 +1,3165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="description" content="Calculadora de trenes de engranajes para lira / cabezal divisor. Funciona sin conexión una vez instalada.">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Lira Engranajes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <!-- PWA: manifest, íconos y service worker (sube manifest.json, sw.js e
+         icon-*.png a la misma carpeta que este archivo, ej. en GitHub Pages,
+         para que la app sea instalable y funcione sin conexión) -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icon-192.png" type="image/png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <title>Calculadora Lira - Engranajes</title>
+    <style>
+        /* ====================================================
+               ESTILOS GENERALES - DISEÑO MOBILE FIRST
+               ==================================================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+            padding: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .app-container {
+            max-width: 480px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        /* ====================================================
+               TARJETA PRINCIPAL
+               ==================================================== */
+        .card {
+            position: relative;
+            background: #1e293b;
+            border-radius: 24px;
+            padding: 20px 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+            border: 1px solid #334155;
+            margin-bottom: 12px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #334155;
+        }
+
+        .header .icon {
+            font-size: 28px;
+            margin-bottom: 2px;
+        }
+
+        .header h1 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #f8fafc;
+            letter-spacing: -0.5px;
+        }
+
+        .header .subtitle {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+
+        .header .version {
+            font-size: 10px;
+            color: #475569;
+            margin-top: 2px;
+        }
+
+        .theme-toggle-btn {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: #94a3b8;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 5px 10px;
+            border-radius: 20px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .theme-toggle-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* ====================================================
+               TABS DE NAVEGACIÓN
+               ==================================================== */
+        .tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 16px;
+            background: #0f172a;
+            border-radius: 14px;
+            padding: 4px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px 8px;
+            border: none;
+            background: transparent;
+            color: #94a3b8;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            background: #3b82f6;
+            color: white;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .tab-btn:active {
+            transform: scale(0.95);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ====================================================
+               ENGRANAJES DISPONIBLES (BADGES)
+               ==================================================== */
+        .gears-available {
+            margin-bottom: 16px;
+        }
+
+        .gears-available .label {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .gears-badge-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+
+        .gear-badge {
+            background: #334155;
+            color: #cbd5e1;
+            padding: 3px 9px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+            border: 1px solid #475569;
+        }
+
+        .gear-badge.added {
+            background: #1a3a2a;
+            border-color: #22c55e;
+            color: #4ade80;
+        }
+
+        .gear-badge.highlight {
+            background: #1e3a5f;
+            border-color: #3b82f6;
+            color: #60a5fa;
+        }
+
+        /* ====================================================
+               INPUTS Y BOTONES
+               ==================================================== */
+        .input-group {
+            margin-bottom: 12px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #cbd5e1;
+            margin-bottom: 4px;
+        }
+
+        .input-group .hint {
+            font-size: 11px;
+            color: #64748b;
+            font-weight: 400;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .input-row .input-field {
+            flex: 1;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 12px 14px;
+            background: #0f172a;
+            border: 2px solid #334155;
+            border-radius: 12px;
+            color: #f8fafc;
+            font-size: 16px;
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+            transition: border-color 0.3s, box-shadow 0.3s;
+            outline: none;
+        }
+
+        .input-field:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+        }
+
+        .input-field::placeholder {
+            color: #475569;
+            font-weight: 400;
+        }
+
+        .input-field.small {
+            font-size: 14px;
+            padding: 10px 12px;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 14px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.97);
+            background: #2563eb;
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            transform: none;
+        }
+
+        .btn-secondary {
+            width: 100%;
+            padding: 10px;
+            background: transparent;
+            color: #94a3b8;
+            border: 2px solid #334155;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:active {
+            background: #1e293b;
+            transform: scale(0.97);
+        }
+
+        .btn-danger {
+            background: #dc2626;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 8px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-danger:active {
+            transform: scale(0.95);
+            background: #b91c1c;
+        }
+
+        .btn-success {
+            background: #22c55e;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 8px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-success:active {
+            transform: scale(0.95);
+            background: #16a34a;
+        }
+
+        .btn-info {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 8px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-info:active {
+            transform: scale(0.95);
+            background: #2563eb;
+        }
+
+        /* ====================================================
+               OPCIONES DE CONFIGURACIÓN
+               ==================================================== */
+        .config-section {
+            background: #0f172a;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 12px;
+            border: 1px solid #334155;
+        }
+
+        .config-section .title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+
+        .config-section .sub-title {
+            font-size: 10px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+
+        .toggle-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .toggle-btn {
+            padding: 6px 14px;
+            border: 2px solid #334155;
+            border-radius: 8px;
+            background: transparent;
+            color: #94a3b8;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex: 1;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .toggle-btn.active {
+            border-color: #3b82f6;
+            background: #1e3a5f;
+            color: #60a5fa;
+        }
+
+        .toggle-btn:active {
+            transform: scale(0.95);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 0;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #3b82f6;
+            cursor: pointer;
+        }
+
+        .checkbox-group label {
+            font-size: 13px;
+            color: #cbd5e1;
+            cursor: pointer;
+        }
+
+        /* ====================================================
+               CONFIGURACIÓN AVANZADA
+               ==================================================== */
+        .advanced-config {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+        }
+
+        .advanced-config .config-item {
+            background: #1e293b;
+            border-radius: 10px;
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #334155;
+        }
+
+        .advanced-config .config-item label {
+            display: block;
+            font-size: 10px;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .advanced-config .config-item .value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #60a5fa;
+            font-family: 'Courier New', monospace;
+        }
+
+        .advanced-config .config-item .input-field {
+            font-size: 16px;
+            padding: 8px 10px;
+            text-align: center;
+            width: 100%;
+        }
+
+        /* ====================================================
+               RESULTADOS
+               ==================================================== */
+        .results {
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .results.visible {
+            display: block;
+        }
+
+        .result-header {
+            background: #0f172a;
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 12px;
+            text-align: center;
+            border: 1px solid #334155;
+        }
+
+        .result-header .t-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #60a5fa;
+            font-family: 'Courier New', monospace;
+        }
+
+        .result-header .t-label {
+            font-size: 11px;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .result-type {
+            display: inline-block;
+            background: #3b82f6;
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            color: white;
+            margin-top: 6px;
+        }
+
+        /* ====================================================
+               DIAGRAMA DEL TREN
+               ==================================================== */
+        .train-diagram {
+            background: #0f172a;
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 12px;
+            border: 1px solid #334155;
+        }
+
+        .train-diagram .title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+            margin-bottom: 10px;
+        }
+
+        .train-flow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 4px;
+            font-size: 14px;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+        }
+
+        .train-flow .gear {
+            background: #1e293b;
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: 2px solid #3b82f6;
+            color: #60a5fa;
+            min-width: 38px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .train-flow .gear.conductor {
+            border-color: #22c55e;
+            color: #4ade80;
+        }
+
+        .train-flow .gear.conducido {
+            border-color: #f59e0b;
+            color: #fbbf24;
+        }
+
+        .train-flow .gear.loco {
+            border-color: #8b5cf6;
+            color: #a78bfa;
+        }
+
+        .train-flow .arrow {
+            color: #475569;
+            font-size: 18px;
+            padding: 0 2px;
+        }
+
+        .train-flow .solid-arrow {
+            color: #475569;
+            font-size: 12px;
+            padding: 0 2px;
+        }
+
+        /* ====================================================
+               DIAGRAMA GRÁFICO (SVG) DEL TREN
+               ==================================================== */
+        .train-visual {
+            background: #0f172a;
+            border-radius: 14px;
+            padding: 12px 8px 14px;
+            margin-bottom: 12px;
+            border: 1px solid #334155;
+        }
+
+        .train-visual .title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+
+        .train-visual .svg-wrap {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        .train-visual svg {
+            display: block;
+            margin: 0 auto;
+            width: 100%;
+            height: auto;
+        }
+
+        .train-visual .gear-shape {
+            stroke: #0f172a;
+            stroke-width: 1.5;
+        }
+
+        .train-visual .gear-shape.conductor {
+            fill: #16311f;
+            stroke: #22c55e;
+        }
+
+        .train-visual .gear-shape.conducido {
+            fill: #3a2a0f;
+            stroke: #f59e0b;
+        }
+
+        .train-visual .hub {
+            fill: #0f172a;
+            stroke: #475569;
+            stroke-width: 1.5;
+        }
+
+        .train-visual .gear-num {
+            font-family: 'Courier New', monospace;
+            font-weight: 700;
+            text-anchor: middle;
+            dominant-baseline: central;
+        }
+
+        .train-visual .gear-num.conductor { fill: #4ade80; }
+        .train-visual .gear-num.conducido { fill: #fbbf24; }
+
+        .train-visual .axis-label {
+            font-size: 8.5px;
+            fill: #64748b;
+            text-anchor: middle;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .train-visual .rot-arrow {
+            font-size: 13px;
+            fill: #94a3b8;
+            text-anchor: middle;
+            dominant-baseline: central;
+        }
+
+        .train-visual .shaft-line {
+            stroke: #8b5cf6;
+            stroke-width: 2;
+            stroke-dasharray: 3 3;
+        }
+
+        .train-visual .shaft-label {
+            font-size: 8px;
+            fill: #a78bfa;
+            text-anchor: middle;
+        }
+
+        .train-visual .mesh-note {
+            text-align: center;
+            font-size: 10px;
+            color: #64748b;
+            margin-top: 6px;
+        }
+
+        .train-visual .visual-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 8px;
+            flex-wrap: wrap;
+        }
+
+        .visual-controls,
+        .visual-export {
+            display: flex;
+            gap: 6px;
+        }
+
+        .visual-export {
+            margin-top: 10px;
+            justify-content: center;
+        }
+
+        .visual-btn {
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: #cbd5e1;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 5px 10px;
+            border-radius: 20px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .visual-btn.active {
+            border-color: #3b82f6;
+            background: #1e3a5f;
+            color: #60a5fa;
+        }
+
+        .visual-btn:active {
+            transform: scale(0.95);
+        }
+
+        .train-visual .gear-rotor {
+            transform-box: fill-box;
+            transform-origin: center;
+        }
+
+        .bar-chart-legend {
+            display: flex;
+            justify-content: center;
+            gap: 14px;
+            margin-top: 6px;
+            font-size: 10px;
+            color: #64748b;
+        }
+
+        .train-legend {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 8px;
+            font-size: 10px;
+            color: #94a3b8;
+        }
+
+        .train-legend span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .train-legend .dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 3px;
+        }
+
+        .dot.green {
+            background: #22c55e;
+        }
+        .dot.yellow {
+            background: #f59e0b;
+        }
+        .dot.blue {
+            background: #3b82f6;
+        }
+        .dot.purple {
+            background: #8b5cf6;
+        }
+
+        .interference-warning {
+            display: none;
+            background: #3b2a1a;
+            border: 1px solid #f97316;
+            border-radius: 12px;
+            padding: 10px 12px;
+            margin-bottom: 12px;
+            font-size: 12px;
+            color: #fdba74;
+            line-height: 1.4;
+        }
+
+        .interference-warning.visible {
+            display: block;
+        }
+
+        .interference-warning strong {
+            color: #fb923c;
+        }
+
+        /* ====================================================
+               ERRORES Y ESTADO
+               ==================================================== */
+        .error-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .error-box {
+            background: #0f172a;
+            border-radius: 10px;
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #334155;
+        }
+
+        .error-box .value {
+            font-size: 16px;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+        }
+
+        .error-box .label {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+        }
+
+        .error-box .value.green {
+            color: #4ade80;
+        }
+        .error-box .value.yellow {
+            color: #fbbf24;
+        }
+        .error-box .value.red {
+            color: #f87171;
+        }
+        .error-box .value.blue {
+            color: #60a5fa;
+        }
+
+        .status-badge {
+            text-align: center;
+            padding: 10px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 13px;
+            margin-bottom: 12px;
+        }
+
+        .status-badge.excellent {
+            background: #064e3b;
+            color: #4ade80;
+            border: 1px solid #22c55e;
+        }
+
+        .status-badge.good {
+            background: #1a3a2a;
+            color: #fbbf24;
+            border: 1px solid #f59e0b;
+        }
+
+        .status-badge.acceptable {
+            background: #3b2a1a;
+            color: #fb923c;
+            border: 1px solid #f97316;
+        }
+
+        .status-badge.poor {
+            background: #3b1a1a;
+            color: #f87171;
+            border: 1px solid #ef4444;
+        }
+
+        /* ====================================================
+               ÁNGULO DE INCLINACIÓN
+               ==================================================== */
+        .angle-section {
+            background: #0f172a;
+            border-radius: 14px;
+            padding: 14px;
+            margin-bottom: 12px;
+            border: 1px solid #334155;
+        }
+
+        .angle-section .title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+
+        .angle-result {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .angle-box {
+            background: #1e293b;
+            border-radius: 8px;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .angle-box .value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #60a5fa;
+            font-family: 'Courier New', monospace;
+        }
+
+        .angle-box .label {
+            font-size: 9px;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .angle-hint {
+            text-align: center;
+            font-size: 10px;
+            color: #64748b;
+            margin-top: 6px;
+        }
+
+        /* ====================================================
+               COMPARATIVA
+               ==================================================== */
+        .comparison {
+            background: #0f172a;
+            border-radius: 14px;
+            padding: 14px;
+            border: 1px solid #334155;
+        }
+
+        .comparison .title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+
+        .comparison-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid #1e293b;
+            font-size: 13px;
+        }
+
+        .comparison-row:last-child {
+            border-bottom: none;
+        }
+
+        .comparison-row .label {
+            color: #94a3b8;
+        }
+
+        .comparison-row .value {
+            font-weight: 600;
+            font-family: 'Courier New', monospace;
+        }
+
+        .comparison-row .value.best {
+            color: #4ade80;
+        }
+
+        /* ====================================================
+               HISTORIAL
+               ==================================================== */
+        .history-section {
+            background: #0f172a;
+            border-radius: 14px;
+            padding: 14px;
+            border: 1px solid #334155;
+        }
+
+        .history-section .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .history-section .title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+        }
+
+        .history-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+            background: #1e293b;
+            border-radius: 8px;
+            margin-bottom: 4px;
+            font-size: 12px;
+        }
+
+        .history-item .left {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .history-item .t-val {
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+            color: #60a5fa;
+        }
+
+        .history-item .detail {
+            font-size: 10px;
+            color: #94a3b8;
+        }
+
+        .history-item .right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .history-item .error-pct {
+            font-weight: 600;
+            font-size: 11px;
+        }
+
+        .history-empty {
+            text-align: center;
+            color: #64748b;
+            font-size: 13px;
+            padding: 16px 0;
+        }
+
+        /* ====================================================
+               SCROLLBAR PERSONALIZADA
+               ==================================================== */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+
+        /* ====================================================
+               UTILIDADES
+               ==================================================== */
+        .text-center {
+            text-align: center;
+        }
+        .mt-8 {
+            margin-top: 8px;
+        }
+        .mt-12 {
+            margin-top: 12px;
+        }
+        .hidden {
+            display: none !important;
+        }
+        .w-full {
+            width: 100%;
+        }
+        .flex {
+            display: flex;
+        }
+        .gap-8 {
+            gap: 8px;
+        }
+        .items-center {
+            align-items: center;
+        }
+        .justify-between {
+            justify-content: space-between;
+        }
+
+        /* ====================================================
+               MODO CLARO
+               ==================================================== */
+        @media (prefers-color-scheme: light) {
+            body {
+                background: #f1f5f9;
+            }
+            .card {
+                background: #ffffff;
+                border-color: #e2e8f0;
+            }
+            .header h1 {
+                color: #0f172a;
+            }
+            .input-field {
+                background: #f8fafc;
+                border-color: #e2e8f0;
+                color: #0f172a;
+            }
+            .input-field:focus {
+                border-color: #3b82f6;
+            }
+            .result-header,
+            .train-diagram,
+            .train-visual,
+            .error-box,
+            .comparison,
+            .config-section,
+            .angle-section,
+            .history-section {
+                background: #f8fafc;
+                border-color: #e2e8f0;
+            }
+            .train-visual .gear-shape.conductor {
+                fill: #dcfce7;
+            }
+            .train-visual .gear-shape.conducido {
+                fill: #fef3c7;
+            }
+            .train-visual .hub {
+                fill: #f8fafc;
+                stroke: #94a3b8;
+            }
+            .train-visual .axis-label {
+                color: #64748b;
+            }
+            .train-visual .rot-arrow {
+                fill: #64748b;
+            }
+            .train-flow .gear {
+                background: #f1f5f9;
+            }
+            .gears-available .label {
+                color: #64748b;
+            }
+            .gear-badge {
+                background: #e2e8f0;
+                color: #1e293b;
+                border-color: #cbd5e1;
+            }
+            .gear-badge.added {
+                background: #dcfce7;
+                border-color: #22c55e;
+                color: #166534;
+            }
+            .gear-badge.highlight {
+                background: #dbeafe;
+                border-color: #3b82f6;
+                color: #1d4ed8;
+            }
+            .header .subtitle {
+                color: #64748b;
+            }
+            .tabs {
+                background: #e2e8f0;
+            }
+            .tab-btn {
+                color: #64748b;
+            }
+            .tab-btn.active {
+                background: #3b82f6;
+                color: white;
+            }
+            .toggle-btn {
+                border-color: #e2e8f0;
+                color: #64748b;
+            }
+            .toggle-btn.active {
+                border-color: #3b82f6;
+                background: #dbeafe;
+                color: #2563eb;
+            }
+            .history-item {
+                background: #f1f5f9;
+            }
+            .checkbox-group label {
+                color: #1e293b;
+            }
+            .angle-box {
+                background: #f1f5f9;
+            }
+            .advanced-config .config-item {
+                background: #f1f5f9;
+                border-color: #e2e8f0;
+            }
+            .advanced-config .config-item .value {
+                color: #2563eb;
+            }
+            .theme-toggle-btn {
+                background: #f1f5f9;
+                border-color: #e2e8f0;
+                color: #475569;
+            }
+            .interference-warning {
+                background: #fff7ed;
+                border-color: #fb923c;
+                color: #9a3412;
+            }
+            .interference-warning strong {
+                color: #c2410c;
+            }
+            .visual-btn {
+                background: #f1f5f9;
+                border-color: #e2e8f0;
+                color: #475569;
+            }
+            .visual-btn.active {
+                border-color: #3b82f6;
+                background: #dbeafe;
+                color: #2563eb;
+            }
+        }
+
+        /* ====================================================
+               TEMA FORZADO MANUALMENTE (independiente del SO)
+               ==================================================== */
+        body[data-theme="light"] {
+            background: #f1f5f9;
+        }
+        body[data-theme="light"] .card {
+            background: #ffffff;
+            border-color: #e2e8f0;
+        }
+        body[data-theme="light"] .header h1 {
+            color: #0f172a;
+        }
+        body[data-theme="light"] .input-field {
+            background: #f8fafc;
+            border-color: #e2e8f0;
+            color: #0f172a;
+        }
+        body[data-theme="light"] .result-header,
+        body[data-theme="light"] .train-diagram,
+        body[data-theme="light"] .train-visual,
+        body[data-theme="light"] .error-box,
+        body[data-theme="light"] .comparison,
+        body[data-theme="light"] .config-section,
+        body[data-theme="light"] .angle-section,
+        body[data-theme="light"] .history-section {
+            background: #f8fafc;
+            border-color: #e2e8f0;
+        }
+        body[data-theme="light"] .train-visual .gear-shape.conductor {
+            fill: #dcfce7;
+        }
+        body[data-theme="light"] .train-visual .gear-shape.conducido {
+            fill: #fef3c7;
+        }
+        body[data-theme="light"] .train-visual .hub {
+            fill: #f8fafc;
+            stroke: #94a3b8;
+        }
+        body[data-theme="light"] .train-visual .axis-label {
+            fill: #64748b;
+        }
+        body[data-theme="light"] .train-visual .rot-arrow {
+            fill: #64748b;
+        }
+        body[data-theme="light"] .train-flow .gear {
+            background: #f1f5f9;
+        }
+        body[data-theme="light"] .gears-available .label {
+            color: #64748b;
+        }
+        body[data-theme="light"] .gear-badge {
+            background: #e2e8f0;
+            color: #1e293b;
+            border-color: #cbd5e1;
+        }
+        body[data-theme="light"] .gear-badge.added {
+            background: #dcfce7;
+            border-color: #22c55e;
+            color: #166534;
+        }
+        body[data-theme="light"] .gear-badge.highlight {
+            background: #dbeafe;
+            border-color: #3b82f6;
+            color: #1d4ed8;
+        }
+        body[data-theme="light"] .header .subtitle {
+            color: #64748b;
+        }
+        body[data-theme="light"] .tabs {
+            background: #e2e8f0;
+        }
+        body[data-theme="light"] .tab-btn {
+            color: #64748b;
+        }
+        body[data-theme="light"] .toggle-btn {
+            border-color: #e2e8f0;
+            color: #64748b;
+        }
+        body[data-theme="light"] .toggle-btn.active {
+            border-color: #3b82f6;
+            background: #dbeafe;
+            color: #2563eb;
+        }
+        body[data-theme="light"] .history-item {
+            background: #f1f5f9;
+        }
+        body[data-theme="light"] .checkbox-group label {
+            color: #1e293b;
+        }
+        body[data-theme="light"] .angle-box {
+            background: #f1f5f9;
+        }
+        body[data-theme="light"] .advanced-config .config-item {
+            background: #f1f5f9;
+            border-color: #e2e8f0;
+        }
+        body[data-theme="light"] .advanced-config .config-item .value {
+            color: #2563eb;
+        }
+        body[data-theme="light"] .theme-toggle-btn {
+            background: #f1f5f9;
+            border-color: #e2e8f0;
+            color: #475569;
+        }
+        body[data-theme="light"] .interference-warning {
+            background: #fff7ed;
+            border-color: #fb923c;
+            color: #9a3412;
+        }
+        body[data-theme="light"] .interference-warning strong {
+            color: #c2410c;
+        }
+        body[data-theme="light"] .visual-btn {
+            background: #f1f5f9;
+            border-color: #e2e8f0;
+            color: #475569;
+        }
+        body[data-theme="light"] .visual-btn.active {
+            border-color: #3b82f6;
+            background: #dbeafe;
+            color: #2563eb;
+        }
+
+        /* Fuerza modo oscuro aunque el sistema operativo pida modo claro */
+        body[data-theme="dark"] {
+            background: #0f172a;
+        }
+        body[data-theme="dark"] .card {
+            background: #1e293b;
+            border-color: #334155;
+        }
+        body[data-theme="dark"] .header h1 {
+            color: #f8fafc;
+        }
+        body[data-theme="dark"] .input-field {
+            background: #0f172a;
+            border-color: #334155;
+            color: #f8fafc;
+        }
+        body[data-theme="dark"] .result-header,
+        body[data-theme="dark"] .train-diagram,
+        body[data-theme="dark"] .train-visual,
+        body[data-theme="dark"] .error-box,
+        body[data-theme="dark"] .comparison,
+        body[data-theme="dark"] .config-section,
+        body[data-theme="dark"] .angle-section,
+        body[data-theme="dark"] .history-section {
+            background: #0f172a;
+            border-color: #334155;
+        }
+        body[data-theme="dark"] .train-visual .gear-shape.conductor {
+            fill: #16311f;
+        }
+        body[data-theme="dark"] .train-visual .gear-shape.conducido {
+            fill: #3a2a0f;
+        }
+        body[data-theme="dark"] .train-visual .hub {
+            fill: #0f172a;
+            stroke: #475569;
+        }
+        body[data-theme="dark"] .train-visual .axis-label {
+            fill: #64748b;
+        }
+        body[data-theme="dark"] .train-visual .rot-arrow {
+            fill: #94a3b8;
+        }
+        body[data-theme="dark"] .train-flow .gear {
+            background: #1e293b;
+        }
+        body[data-theme="dark"] .gear-badge {
+            background: #334155;
+            color: #cbd5e1;
+            border-color: #475569;
+        }
+        body[data-theme="dark"] .gear-badge.added {
+            background: #1a3a2a;
+            border-color: #22c55e;
+            color: #4ade80;
+        }
+        body[data-theme="dark"] .gear-badge.highlight {
+            background: #1e3a5f;
+            border-color: #3b82f6;
+            color: #60a5fa;
+        }
+        body[data-theme="dark"] .header .subtitle {
+            color: #94a3b8;
+        }
+        body[data-theme="dark"] .tabs {
+            background: #0f172a;
+        }
+        body[data-theme="dark"] .tab-btn {
+            color: #94a3b8;
+        }
+        body[data-theme="dark"] .toggle-btn {
+            border-color: #334155;
+            color: #94a3b8;
+        }
+        body[data-theme="dark"] .toggle-btn.active {
+            border-color: #3b82f6;
+            background: #1e3a5f;
+            color: #60a5fa;
+        }
+        body[data-theme="dark"] .history-item {
+            background: #1e293b;
+        }
+        body[data-theme="dark"] .checkbox-group label {
+            color: #cbd5e1;
+        }
+        body[data-theme="dark"] .angle-box {
+            background: #1e293b;
+        }
+        body[data-theme="dark"] .advanced-config .config-item {
+            background: #1e293b;
+            border-color: #334155;
+        }
+        body[data-theme="dark"] .advanced-config .config-item .value {
+            color: #60a5fa;
+        }
+        body[data-theme="dark"] .theme-toggle-btn {
+            background: #0f172a;
+            border-color: #334155;
+            color: #94a3b8;
+        }
+        body[data-theme="dark"] .interference-warning {
+            background: #3b2a1a;
+            border-color: #f97316;
+            color: #fdba74;
+        }
+        body[data-theme="dark"] .interference-warning strong {
+            color: #fb923c;
+        }
+        body[data-theme="dark"] .visual-btn {
+            background: #1e293b;
+            border-color: #334155;
+            color: #cbd5e1;
+        }
+        body[data-theme="dark"] .visual-btn.active {
+            border-color: #3b82f6;
+            background: #1e3a5f;
+            color: #60a5fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- ==================================================
+        TARJETA PRINCIPAL
+        ================================================== -->
+        <div class="card">
+            <!-- BOTÓN DE TEMA -->
+            <button id="themeToggleBtn" class="theme-toggle-btn" type="button">🌓 Auto</button>
+
+            <!-- HEADER -->
+            <div class="header">
+                <div class="icon">⚙️</div>
+                <h1>Calculadora Lira</h1>
+                <div class="subtitle">Engranajes helicoidales · DP</div>
+                <div class="version">v4.0 · Animación, escala real, comparativa y PWA</div>
+            </div>
+
+            <!-- TABS -->
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="calculadora">🧮 Calculadora</button>
+                <button class="tab-btn" data-tab="historial">📋 Historial</button>
+                <button class="tab-btn" data-tab="config">⚙️ Config</button>
+            </div>
+
+            <!-- ==============================================
+            TAB 1: CALCULADORA
+            ============================================== -->
+            <div class="tab-content active" id="tab-calculadora">
+                <!-- ENGRANAJES DISPONIBLES -->
+                <div class="gears-available">
+                    <span class="label">🔩 Ruedas disponibles</span>
+                    <div class="gears-badge-container" id="gearBadges">
+                        <!-- Se llena con JS -->
+                    </div>
+                </div>
+
+                <!-- INPUT -->
+                <div class="input-group">
+                    <label for="tInput">
+                        Valor de <strong>T</strong>
+                        <span class="hint">(ej. 0.3439)</span>
+                    </label>
+                    <input type="number" id="tInput" class="input-field" placeholder="0.0000" step="any" inputmode="decimal" autofocus>
+                </div>
+
+                <!-- OPCIÓN: PASO DE HÉLICE Y ÁNGULO -->
+                <div class="input-group">
+                    <label>
+                        Paso de hélice <span class="hint">(opcional, para calcular ángulo)</span>
+                    </label>
+                    <div class="input-row">
+                        <input type="number" id="phInput" class="input-field small" placeholder="Ph (mm)" step="any" inputmode="decimal">
+                        <input type="number" id="ptInput" class="input-field small" placeholder="Pt (mm)" step="any" inputmode="decimal" value="6.35">
+                    </div>
+                </div>
+
+                <!-- BOTÓN CALCULAR -->
+                <button id="calcBtn" class="btn-primary">
+                    <span>🔍</span> Calcular tren
+                </button>
+
+                <!-- ==============================================
+                RESULTADOS (ocultos inicialmente)
+                ============================================== -->
+                <div id="resultsContainer" class="results" aria-live="polite">
+                    <!-- HEADER DEL RESULTADO -->
+                    <div class="result-header">
+                        <div class="t-label">T calculado</div>
+                        <div class="t-value" id="resultT">0.000000</div>
+                        <div class="result-type" id="resultType">Simple (2 ruedas)</div>
+                    </div>
+
+                    <!-- DIAGRAMA DEL TREN -->
+                    <div class="train-diagram">
+                        <div class="title">📐 Disposición en la lira</div>
+                        <div class="train-flow" id="trainDiagram">
+                            <!-- Se llena con JS -->
+                        </div>
+                        <div class="train-legend">
+                            <span><span class="dot green"></span> Conductor</span>
+                            <span><span class="dot yellow"></span> Conducido</span>
+                            <span><span class="dot purple"></span> Loca (opcional)</span>
+                            <span><span class="dot blue"></span> Eje intermedio</span>
+                        </div>
+                    </div>
+
+                    <!-- VISTA GRÁFICA DEL TREN (SVG) -->
+                    <div class="train-visual">
+                        <div class="visual-header">
+                            <span class="title" style="margin-bottom:0;">⚙️ Vista gráfica del tren final</span>
+                            <div class="visual-controls">
+                                <button id="animToggleBtn" class="visual-btn" type="button" title="Animar giro">▶️</button>
+                                <button id="scaleToggleBtn" class="visual-btn" type="button" title="Cambiar vista">📐 Escala</button>
+                            </div>
+                        </div>
+                        <div class="svg-wrap" id="trainVisualWrap">
+                            <!-- Se llena con JS -->
+                        </div>
+                        <div class="mesh-note" id="trainVisualNote"></div>
+                        <div class="mesh-note" id="scaleNote" style="display:none;"></div>
+                        <div class="visual-export">
+                            <button id="exportPngBtn" class="visual-btn" type="button">🖼️ PNG</button>
+                            <button id="exportSvgBtn" class="visual-btn" type="button">🗂️ SVG</button>
+                        </div>
+                    </div>
+
+                    <!-- COMPARATIVA GRÁFICA SIMPLE VS COMPUESTO -->
+                    <div class="train-visual">
+                        <div class="title">📊 Comparativa visual de error</div>
+                        <div class="svg-wrap" id="comparisonChartWrap">
+                            <!-- Se llena con JS -->
+                        </div>
+                    </div>
+
+                    <!-- AVISO DE INTERFERENCIA / RUEDA LOCA SUGERIDA -->
+                    <div id="interferenceWarning" class="interference-warning"></div>
+
+                    <!-- ERRORES -->
+                    <div class="error-details">
+                        <div class="error-box">
+                            <div class="label">Error absoluto</div>
+                            <div class="value blue" id="errorAbs">0.000000</div>
+                        </div>
+                        <div class="error-box">
+                            <div class="label">Error porcentual</div>
+                            <div class="value green" id="errorPct">0.000 %</div>
+                        </div>
+                    </div>
+
+                    <!-- BADGE DE ESTADO -->
+                    <div id="statusBadge" class="status-badge">
+                        <!-- Se llena con JS -->
+                    </div>
+
+                    <!-- ÁNGULO DE INCLINACIÓN (si se proporcionan datos) -->
+                    <div id="angleSection" class="angle-section hidden">
+                        <div class="title">📐 Ángulo de inclinación de la mesa</div>
+                        <div class="angle-result">
+                            <div class="angle-box">
+                                <div class="value" id="angleValue">0.00°</div>
+                                <div class="label">Ángulo de hélice</div>
+                            </div>
+                            <div class="angle-box">
+                                <div class="value" id="phRealValue">0.00 mm</div>
+                                <div class="label">Paso de hélice real</div>
+                            </div>
+                        </div>
+                        <div class="angle-hint" id="angleHint">
+                            Inclina la mesa en el sentido indicado según el tipo de hélice
+                        </div>
+                    </div>
+
+                    <!-- COMPARATIVA -->
+                    <div class="comparison">
+                        <div class="title">📊 Comparativa de opciones</div>
+                        <div class="comparison-row">
+                            <span class="label">Tren Simple</span>
+                            <span class="value" id="compSimple">0.000000 (0.00%)</span>
+                        </div>
+                        <div class="comparison-row">
+                            <span class="label">Tren Compuesto</span>
+                            <span class="value" id="compCompuesto">0.000000 (0.00%)</span>
+                        </div>
+                        <div class="comparison-row" style="border-top: 2px solid #334155; margin-top: 4px; padding-top: 8px;">
+                            <span class="label" style="font-weight:700;">✅ Recomendado</span>
+                            <span class="value best" id="compRecomendado">Simple</span>
+                        </div>
+                    </div>
+
+                    <!-- BOTÓN GUARDAR, COPIAR Y LIMPIAR -->
+                    <div style="display:flex;gap:8px;margin-top:12px;">
+                        <button id="saveBtn" class="btn-success" style="flex:1;">💾 Guardar</button>
+                        <button id="copyBtn" class="btn-info" style="flex:1;">📋 Copiar</button>
+                        <button id="clearBtn" class="btn-secondary" style="flex:1;">🔄 Nueva</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==============================================
+            TAB 2: HISTORIAL
+            ============================================== -->
+            <div class="tab-content" id="tab-historial">
+                <div class="history-section">
+                    <div class="header-row">
+                        <span class="title">📋 Historial de cálculos</span>
+                        <button id="clearHistoryBtn" class="btn-danger">🗑️ Borrar todo</button>
+                    </div>
+                    <div id="historyList" class="history-list">
+                        <div class="history-empty">No hay cálculos guardados</div>
+                    </div>
+                    <div style="margin-top:8px;font-size:10px;color:#64748b;text-align:center;">
+                        Guarda tus cálculos desde la pestaña Calculadora
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==============================================
+            TAB 3: CONFIGURACIÓN
+            ============================================== -->
+            <div class="tab-content" id="tab-config">
+                <!-- TIPO DE TREN -->
+                <div class="config-section">
+                    <div class="title">🔧 Tipo de tren (recomendado automático)</div>
+                    <div class="toggle-group">
+                        <button class="toggle-btn active" data-mode="auto">🤖 Automático</button>
+                        <button class="toggle-btn" data-mode="simple">🔹 Simple</button>
+                        <button class="toggle-btn" data-mode="compuesto">🔸 Compuesto</button>
+                    </div>
+                </div>
+
+                <!-- CONFIGURACIÓN AVANZADA -->
+                <div class="config-section">
+                    <div class="title">⚙️ Configuración de la máquina</div>
+                    <div class="sub-title">Parámetros de tu fresadora y cabezal divisor</div>
+                    <div class="advanced-config" style="margin-top:8px;">
+                        <div class="config-item">
+                            <label>Paso tornillo patrón (Pt)</label>
+                            <input type="number" id="configPt" class="input-field small" step="any" value="6.35" style="font-size:16px;padding:8px;text-align:center;">
+                            <div style="font-size:9px;color:#64748b;margin-top:2px;">mm (6.35 = 1/4")</div>
+                        </div>
+                        <div class="config-item">
+                            <label>Relación divisor (R)</label>
+                            <input type="number" id="configR" class="input-field small" step="any" value="40" style="font-size:16px;padding:8px;text-align:center;">
+                            <div style="font-size:9px;color:#64748b;margin-top:2px;">(40 es estándar)</div>
+                        </div>
+                        <div class="config-item">
+                            <label>Módulo (opcional)</label>
+                            <input type="number" id="configModulo" class="input-field small" step="any" placeholder="mm/diente" style="font-size:16px;padding:8px;text-align:center;">
+                            <div style="font-size:9px;color:#64748b;margin-top:2px;">Para ver distancias reales</div>
+                        </div>
+                    </div>
+                    <button id="applyConfigBtn" class="btn-secondary" style="margin-top:8px;">✅ Aplicar configuración</button>
+                </div>
+
+                <!-- ENGRANAJES -->
+                <div class="config-section">
+                    <div class="title">🔩 Gestionar engranajes</div>
+                    <div style="display:flex;gap:8px;margin-bottom:8px;">
+                        <input type="number" id="newGearInput" class="input-field small" placeholder="Añadir dientes" step="1" inputmode="numeric" style="flex:1;">
+                        <button id="addGearBtn" class="btn-success">➕</button>
+                    </div>
+                    <div style="display:flex;flex-wrap:wrap;gap:4px;" id="gearManagerList">
+                        <!-- Se llena con JS -->
+                    </div>
+                    <div style="margin-top:6px;font-size:10px;color:#64748b;">
+                        Toca una rueda para eliminarla (mínimo 4 ruedas)
+                    </div>
+                </div>
+
+                <!-- OPCIONES ADICIONALES -->
+                <div class="config-section">
+                    <div class="title">⚙️ Opciones adicionales</div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="autoSaveCheck">
+                        <label for="autoSaveCheck">Guardar automáticamente al calcular</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="showAllCheck" checked>
+                        <label for="showAllCheck">Mostrar siempre ambas opciones (Simple/Compuesto)</label>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="showLocaCheck" checked>
+                        <label for="showLocaCheck">Sugerir rueda loca si es necesario</label>
+                    </div>
+                </div>
+
+                <button id="resetGearsBtn" class="btn-secondary" style="margin-top:4px;">
+                    🔄 Restaurar engranajes por defecto
+                </button>
+
+                <!-- RESPALDO DE DATOS -->
+                <div class="config-section" style="margin-top:12px;">
+                    <div class="title">💾 Respaldo de datos</div>
+                    <div class="sub-title" style="margin-bottom:8px;">Exporta o restaura tu historial, engranajes y configuración</div>
+                    <div style="display:flex;gap:8px;">
+                        <button id="exportBtn" class="btn-info" style="flex:1;">⬇️ Exportar</button>
+                        <button id="importBtn" class="btn-secondary" style="flex:1;">⬆️ Importar</button>
+                    </div>
+                    <input type="file" id="importFileInput" accept="application/json,.json" style="display:none;">
+                </div>
+            </div>
+        </div>
+
+        <!-- FOOTER -->
+        <div style="text-align:center; font-size:10px; color:#475569; padding:8px 0;">
+            Fresado de engranajes helicoidales · v3.0 · Configuración avanzada
+        </div>
+    </div>
+
+    <!-- ====================================================
+    JAVASCRIPT - LÓGICA PRINCIPAL
+    ==================================================== -->
+    <script>
+        (function() {
+            'use strict';
+
+            // ----------------------------------------------------
+            // CONFIGURACIÓN - CON PARÁMETROS DE MÁQUINA
+            // ----------------------------------------------------
+            const DEFAULT_GEARS = [25, 30, 35, 40, 50, 55, 60, 70, 80, 90, 100];
+            let engranajes = [...DEFAULT_GEARS];
+            let historial = [];
+            let modoTren = 'auto';
+            let autoSave = false;
+            let showLoca = true;
+            let tema = localStorage.getItem('lira_theme') || 'auto';
+
+            // Parámetros de la máquina (configurables)
+            let configPt = 6.35; // Paso del tornillo patrón en mm (por defecto 6.35 = 1/4")
+            let configR = 40; // Relación del cabezal divisor (por defecto 40)
+            let configModulo = null; // Módulo en mm/diente (opcional, para vista a escala real)
+
+            // Estado de la vista gráfica
+            let modoVista = 'esquematico'; // 'esquematico' | 'escala'
+            let animando = false;
+            let ultimoMejor = null; // último resultado renderizado (para redibujar en cambios de tema/vista)
+            let ultimoSimple = null;
+            let ultimoCompuesto = null;
+
+            // ----------------------------------------------------
+            // DOM REFERENCIAS
+            // ----------------------------------------------------
+            const tInput = document.getElementById('tInput');
+            const phInput = document.getElementById('phInput');
+            const ptInput = document.getElementById('ptInput');
+            const calcBtn = document.getElementById('calcBtn');
+            const clearBtn = document.getElementById('clearBtn');
+            const saveBtn = document.getElementById('saveBtn');
+            const copyBtn = document.getElementById('copyBtn');
+            const resultsContainer = document.getElementById('resultsContainer');
+            const interferenceWarning = document.getElementById('interferenceWarning');
+            const themeToggleBtn = document.getElementById('themeToggleBtn');
+            const exportBtn = document.getElementById('exportBtn');
+            const importBtn = document.getElementById('importBtn');
+            const importFileInput = document.getElementById('importFileInput');
+
+            const resultT = document.getElementById('resultT');
+            const resultType = document.getElementById('resultType');
+            const trainDiagram = document.getElementById('trainDiagram');
+            const trainVisualWrap = document.getElementById('trainVisualWrap');
+            const trainVisualNote = document.getElementById('trainVisualNote');
+            const scaleNote = document.getElementById('scaleNote');
+            const comparisonChartWrap = document.getElementById('comparisonChartWrap');
+            const animToggleBtn = document.getElementById('animToggleBtn');
+            const scaleToggleBtn = document.getElementById('scaleToggleBtn');
+            const exportPngBtn = document.getElementById('exportPngBtn');
+            const exportSvgBtn = document.getElementById('exportSvgBtn');
+            const errorAbs = document.getElementById('errorAbs');
+            const errorPct = document.getElementById('errorPct');
+            const statusBadge = document.getElementById('statusBadge');
+            const compSimple = document.getElementById('compSimple');
+            const compCompuesto = document.getElementById('compCompuesto');
+            const compRecomendado = document.getElementById('compRecomendado');
+            const gearBadges = document.getElementById('gearBadges');
+            const gearManagerList = document.getElementById('gearManagerList');
+            const historyList = document.getElementById('historyList');
+            const angleSection = document.getElementById('angleSection');
+            const angleValue = document.getElementById('angleValue');
+            const phRealValue = document.getElementById('phRealValue');
+            const angleHint = document.getElementById('angleHint');
+
+            // Configuración avanzada
+            const configPtInput = document.getElementById('configPt');
+            const configRInput = document.getElementById('configR');
+            const configModuloInput = document.getElementById('configModulo');
+            const applyConfigBtn = document.getElementById('applyConfigBtn');
+
+            // Tabs
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            const tabContents = {
+                calculadora: document.getElementById('tab-calculadora'),
+                historial: document.getElementById('tab-historial'),
+                config: document.getElementById('tab-config')
+            };
+
+            // Config
+            const toggleBtns = document.querySelectorAll('.toggle-btn');
+            const newGearInput = document.getElementById('newGearInput');
+            const addGearBtn = document.getElementById('addGearBtn');
+            const resetGearsBtn = document.getElementById('resetGearsBtn');
+            const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+            const autoSaveCheck = document.getElementById('autoSaveCheck');
+            const showAllCheck = document.getElementById('showAllCheck');
+            const showLocaCheck = document.getElementById('showLocaCheck');
+
+            // ----------------------------------------------------
+            // INICIALIZACIÓN
+            // ----------------------------------------------------
+            function init() {
+                // Cargar configuración guardada
+                loadConfigFromStorage();
+
+                renderGearBadges();
+                renderGearManager();
+                renderHistory();
+                loadFromStorage();
+
+                // Actualizar campos de configuración
+                configPtInput.value = configPt;
+                configRInput.value = configR;
+                ptInput.value = configPt;
+                if (configModulo) configModuloInput.value = configModulo;
+
+                // Event listeners
+                calcBtn.addEventListener('click', calcular);
+                clearBtn.addEventListener('click', limpiarResultados);
+                saveBtn.addEventListener('click', guardarResultado);
+                copyBtn.addEventListener('click', copiarResultado);
+                clearHistoryBtn.addEventListener('click', borrarHistorial);
+                resetGearsBtn.addEventListener('click', resetearEngranajes);
+                addGearBtn.addEventListener('click', añadirEngranaje);
+                applyConfigBtn.addEventListener('click', aplicarConfiguracion);
+                themeToggleBtn.addEventListener('click', cicloTema);
+                exportBtn.addEventListener('click', exportarDatos);
+                importBtn.addEventListener('click', function() { importFileInput.click(); });
+                importFileInput.addEventListener('change', function() {
+                    if (this.files && this.files[0]) {
+                        importarDatos(this.files[0]);
+                        this.value = '';
+                    }
+                });
+                animToggleBtn.addEventListener('click', toggleAnimacion);
+                scaleToggleBtn.addEventListener('click', toggleModoVista);
+                exportPngBtn.addEventListener('click', exportarPNG);
+                exportSvgBtn.addEventListener('click', exportarSVG);
+
+                aplicarTema();
+
+                autoSaveCheck.addEventListener('change', function() { autoSave = this.checked; });
+                showLocaCheck.addEventListener('change', function() { showLoca = this.checked; });
+
+                tInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') calcBtn.click();
+                });
+
+                // Tabs
+                tabBtns.forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        tabBtns.forEach(b => b.classList.remove('active'));
+                        this.classList.add('active');
+                        const tabId = this.dataset.tab;
+                        Object.keys(tabContents).forEach(key => {
+                            tabContents[key].classList.toggle('active', key === tabId);
+                        });
+                    });
+                });
+
+                // Toggle modo tren
+                toggleBtns.forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        toggleBtns.forEach(b => b.classList.remove('active'));
+                        this.classList.add('active');
+                        modoTren = this.dataset.mode;
+                        localStorage.setItem('lira_modo', modoTren);
+                    });
+                });
+
+                newGearInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') añadirEngranaje();
+                });
+
+                // Cargar modo guardado
+                const savedMode = localStorage.getItem('lira_modo');
+                if (savedMode) {
+                    modoTren = savedMode;
+                    toggleBtns.forEach(b => {
+                        b.classList.toggle('active', b.dataset.mode === savedMode);
+                    });
+                }
+            }
+
+            // ----------------------------------------------------
+            // CONFIGURACIÓN DE LA MÁQUINA
+            // ----------------------------------------------------
+            function aplicarConfiguracion() {
+                const pt = parseFloat(configPtInput.value);
+                const r = parseFloat(configRInput.value);
+                const modRaw = configModuloInput.value.trim();
+
+                if (isNaN(pt) || pt <= 0) {
+                    alert('Introduce un valor válido para el paso del tornillo patrón (Pt)');
+                    return;
+                }
+                if (isNaN(r) || r <= 0) {
+                    alert('Introduce un valor válido para la relación del divisor (R)');
+                    return;
+                }
+
+                configPt = pt;
+                configR = r;
+
+                if (modRaw === '') {
+                    configModulo = null;
+                } else {
+                    const mod = parseFloat(modRaw);
+                    if (isNaN(mod) || mod <= 0) {
+                        alert('El módulo debe ser un número positivo (o déjalo vacío)');
+                        return;
+                    }
+                    configModulo = mod;
+                }
+
+                // Actualizar el campo de paso en la calculadora
+                ptInput.value = pt;
+
+                // Guardar en storage
+                saveConfigToStorage();
+
+                // Feedback
+                applyConfigBtn.textContent = '✅ Aplicado';
+                setTimeout(() => applyConfigBtn.textContent = '✅ Aplicar configuración', 1500);
+
+                // Si hay un resultado visible, recalcular automáticamente
+                if (resultsContainer.classList.contains('visible')) {
+                    const tobj = parseFloat(resultsContainer.dataset.tobj);
+                    if (tobj && !isNaN(tobj)) {
+                        const resultado = buscarMejor(tobj);
+                        renderResultados(tobj, resultado);
+                    }
+                }
+
+                // Actualizar el ángulo si hay datos
+                const ph = parseFloat(phInput.value);
+                if (ph && !isNaN(ph) && ph > 0) {
+                    const tobj = parseFloat(resultsContainer.dataset.tobj);
+                    if (tobj && !isNaN(tobj)) {
+                        const resultado = buscarMejor(tobj);
+                        renderResultados(tobj, resultado);
+                    }
+                }
+            }
+
+            function saveConfigToStorage() {
+                try {
+                    localStorage.setItem('lira_config_pt', configPt.toString());
+                    localStorage.setItem('lira_config_r', configR.toString());
+                    if (configModulo) {
+                        localStorage.setItem('lira_config_modulo', configModulo.toString());
+                    } else {
+                        localStorage.removeItem('lira_config_modulo');
+                    }
+                } catch (e) { /* ignore */ }
+            }
+
+            function loadConfigFromStorage() {
+                try {
+                    const pt = localStorage.getItem('lira_config_pt');
+                    if (pt) {
+                        const val = parseFloat(pt);
+                        if (!isNaN(val) && val > 0) configPt = val;
+                    }
+                    const r = localStorage.getItem('lira_config_r');
+                    if (r) {
+                        const val = parseFloat(r);
+                        if (!isNaN(val) && val > 0) configR = val;
+                    }
+                    const mod = localStorage.getItem('lira_config_modulo');
+                    if (mod) {
+                        const val = parseFloat(mod);
+                        if (!isNaN(val) && val > 0) configModulo = val;
+                    }
+                } catch (e) { /* ignore */ }
+            }
+
+            // ----------------------------------------------------
+            // FUNCIONES DE CÁLCULO (actualizadas con configR)
+            // ----------------------------------------------------
+            function calcularSimple(Tobj) {
+                let mejor = null;
+                let mejorError = Infinity;
+
+                for (const z1 of engranajes) {
+                    for (const z2 of engranajes) {
+                        if (z1 === z2) continue;
+                        const rel = z1 / z2;
+                        const err = Math.abs(rel - Tobj);
+                        if (err < mejorError) {
+                            mejorError = err;
+                            mejor = { z1, z2, rel, err };
+                        }
+                    }
+                }
+                return {
+                    tipo: 'Simple (2 ruedas)',
+                    conductores: [mejor.z1],
+                    conducidos: [mejor.z2],
+                    relacion: mejor.rel,
+                    errorAbs: mejor.err,
+                    errorPct: (mejor.err / Tobj) * 100,
+                    numRuedas: 2
+                };
+            }
+
+            function calcularCompuesto(Tobj) {
+                let mejor = null;
+                let mejorError = Infinity;
+
+                for (const z1 of engranajes) {
+                    for (const z2 of engranajes) {
+                        for (const z3 of engranajes) {
+                            for (const z4 of engranajes) {
+                                const rel = (z1 / z2) * (z3 / z4);
+                                const err = Math.abs(rel - Tobj);
+                                if (err < mejorError) {
+                                    mejorError = err;
+                                    mejor = { z1, z2, z3, z4, rel, err };
+                                }
+                            }
+                        }
+                    }
+                }
+                return {
+                    tipo: 'Compuesto (4 ruedas)',
+                    conductores: [mejor.z1, mejor.z3],
+                    conducidos: [mejor.z2, mejor.z4],
+                    relacion: mejor.rel,
+                    errorAbs: mejor.err,
+                    errorPct: (mejor.err / Tobj) * 100,
+                    numRuedas: 4
+                };
+            }
+
+            function buscarMejor(Tobj) {
+                const simple = calcularSimple(Tobj);
+                const compuesto = calcularCompuesto(Tobj);
+
+                let mejor;
+                if (modoTren === 'simple') {
+                    mejor = { ...simple, esSimple: true };
+                } else if (modoTren === 'compuesto') {
+                    mejor = { ...compuesto, esSimple: false };
+                } else {
+                    if (simple.errorAbs < compuesto.errorAbs) {
+                        mejor = { ...simple, esSimple: true };
+                    } else {
+                        mejor = { ...compuesto, esSimple: false };
+                    }
+                }
+
+                return { simple, compuesto, mejor };
+            }
+
+            // ----------------------------------------------------
+            // TEMA CLARO / OSCURO MANUAL
+            // ----------------------------------------------------
+            function aplicarTema() {
+                if (tema === 'light') {
+                    document.body.setAttribute('data-theme', 'light');
+                    themeToggleBtn.textContent = '☀️ Claro';
+                } else if (tema === 'dark') {
+                    document.body.setAttribute('data-theme', 'dark');
+                    themeToggleBtn.textContent = '🌙 Oscuro';
+                } else {
+                    document.body.removeAttribute('data-theme');
+                    themeToggleBtn.textContent = '🌓 Auto';
+                }
+                // Si hay un resultado visible, redibujamos el SVG con la paleta nueva
+                if (ultimoMejor) {
+                    renderTrainVisual(ultimoMejor);
+                    renderComparativa(ultimoSimple, ultimoCompuesto, ultimoMejor);
+                }
+            }
+
+            function cicloTema() {
+                tema = tema === 'auto' ? 'light' : (tema === 'light' ? 'dark' : 'auto');
+                localStorage.setItem('lira_theme', tema);
+                aplicarTema();
+            }
+
+            // ----------------------------------------------------
+            // DETECCIÓN DE INTERFERENCIA FÍSICA Y RUEDA LOCA
+            // ----------------------------------------------------
+            // Heurística: si la relación de dientes entre dos ruedas que deben
+            // engranar directamente es muy grande (>= 3:1), es probable que en
+            // el brazo/lira no exista distancia entre centros suficiente para
+            // que la rueda pequeña alcance a la grande. En ese caso se sugiere
+            // una rueda loca intermedia (no altera la relación de transmisión).
+            const UMBRAL_INTERFERENCIA = 3;
+
+            function evaluarPar(zA, zB) {
+                const mayor = Math.max(zA, zB);
+                const menor = Math.min(zA, zB);
+                const ratio = mayor / menor;
+                if (ratio < UMBRAL_INTERFERENCIA) return null;
+
+                // Buscamos, entre las ruedas disponibles, la que más se acerque
+                // a la media geométrica de ambas (mejor candidata para "puentear"
+                // físicamente sin invadir demasiado espacio)
+                const objetivo = Math.sqrt(zA * zB);
+                let mejorG = null, mejorDist = Infinity;
+                engranajes.forEach(g => {
+                    if (g === zA || g === zB) return;
+                    const dist = Math.abs(g - objetivo);
+                    if (dist < mejorDist) { mejorDist = dist; mejorG = g; }
+                });
+
+                return { zA, zB, ratio, sugerida: mejorG };
+            }
+
+            function renderAvisoInterferencia(mejor) {
+                if (!showLoca) {
+                    interferenceWarning.classList.remove('visible');
+                    interferenceWarning.innerHTML = '';
+                    return;
+                }
+
+                const pares = [];
+                if (mejor.tipo.includes('Simple')) {
+                    pares.push(evaluarPar(mejor.conductores[0], mejor.conducidos[0]));
+                } else {
+                    pares.push(evaluarPar(mejor.conductores[0], mejor.conducidos[0]));
+                    pares.push(evaluarPar(mejor.conductores[1], mejor.conducidos[1]));
+                }
+
+                const alertas = pares.filter(p => p !== null);
+                if (alertas.length === 0) {
+                    interferenceWarning.classList.remove('visible');
+                    interferenceWarning.innerHTML = '';
+                    return;
+                }
+
+                let html = '⚠️ <strong>Posible interferencia física:</strong> ';
+                html += alertas.map(a => {
+                    const base = `${a.zA} y ${a.zB} tienen una diferencia de tamaño grande (proporción ${a.ratio.toFixed(1)}:1); podrían no engranar directamente en el brazo de tu lira`;
+                    if (a.sugerida) {
+                        return `${base}. Prueba con una rueda loca de <strong>${a.sugerida}</strong> dientes para salvar la distancia (no cambia la relación).`;
+                    }
+                    return `${base}. No hay una rueda disponible ideal para usar como loca; considera añadir una en Config.`;
+                }).join(' ');
+
+                interferenceWarning.innerHTML = html;
+                interferenceWarning.classList.add('visible');
+            }
+
+            // ----------------------------------------------------
+            // COPIAR RESULTADO COMO TEXTO
+            // ----------------------------------------------------
+            function copiarResultado() {
+                const tobj = parseFloat(resultsContainer.dataset.tobj);
+                if (!tobj || isNaN(tobj)) return;
+                const mejor = JSON.parse(resultsContainer.dataset.resultado || '{}');
+                if (!mejor.relacion) return;
+
+                let texto = 'Calculadora Lira — Tren de engranajes\n';
+                texto += `T objetivo: ${tobj}\n`;
+                texto += `Tipo: ${mejor.tipo}\n`;
+                if (mejor.tipo.includes('Simple')) {
+                    texto += `Conductor (mesa): ${mejor.conductores[0]}  →  Conducido (divisor): ${mejor.conducidos[0]}\n`;
+                } else {
+                    texto += `Z1 (mesa): ${mejor.conductores[0]}  →  Z2: ${mejor.conducidos[0]}  |  mismo eje  |  Z3: ${mejor.conductores[1]}  →  Z4 (divisor): ${mejor.conducidos[1]}\n`;
+                }
+                texto += `Relación obtenida: ${mejor.relacion.toFixed(6)}\n`;
+                texto += `Error: ${mejor.errorAbs.toFixed(6)} (${mejor.errorPct.toFixed(3)}%)\n`;
+
+                const ph = parseFloat(phInput.value);
+                if (ph && !isNaN(ph) && ph > 0 && !angleSection.classList.contains('hidden')) {
+                    texto += `Ángulo de hélice: ${angleValue.textContent}\n`;
+                    texto += `Paso de hélice real: ${phRealValue.textContent}\n`;
+                }
+
+                const pt = parseFloat(ptInput.value) || configPt;
+                texto += `R = ${configR}  ·  Pt = ${pt.toFixed(3)} mm`;
+
+                const feedback = function() {
+                    copyBtn.textContent = '✅ Copiado';
+                    setTimeout(() => copyBtn.textContent = '📋 Copiar', 1500);
+                };
+
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(texto).then(feedback).catch(function() {
+                        copiaAlternativa(texto, feedback);
+                    });
+                } else {
+                    copiaAlternativa(texto, feedback);
+                }
+            }
+
+            function copiaAlternativa(texto, cb) {
+                try {
+                    const ta = document.createElement('textarea');
+                    ta.value = texto;
+                    ta.style.position = 'fixed';
+                    ta.style.left = '-9999px';
+                    document.body.appendChild(ta);
+                    ta.focus();
+                    ta.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                    cb();
+                } catch (e) {
+                    alert('No se pudo copiar automáticamente. Copia manualmente:\n\n' + texto);
+                }
+            }
+
+            // ----------------------------------------------------
+            // EXPORTAR / IMPORTAR RESPALDO DE DATOS
+            // ----------------------------------------------------
+            function exportarDatos() {
+                const payload = {
+                    app: 'Calculadora Lira',
+                    version: 1,
+                    exportado: new Date().toISOString(),
+                    historial: historial,
+                    engranajes: engranajes,
+                    configPt: configPt,
+                    configR: configR,
+                    configModulo: configModulo,
+                    modoTren: modoTren
+                };
+
+                try {
+                    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `lira_backup_${new Date().toISOString().slice(0, 10)}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+                    exportBtn.textContent = '✅ Exportado';
+                    setTimeout(() => exportBtn.textContent = '⬇️ Exportar', 1500);
+                } catch (e) {
+                    alert('No se pudo exportar el archivo en este navegador.');
+                }
+            }
+
+            function importarDatos(file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = JSON.parse(e.target.result);
+
+                        if (Array.isArray(data.historial)) {
+                            historial = data.historial;
+                        }
+                        if (Array.isArray(data.engranajes) && data.engranajes.length >= 4) {
+                            engranajes = data.engranajes;
+                        }
+                        if (typeof data.configPt === 'number' && data.configPt > 0) {
+                            configPt = data.configPt;
+                        }
+                        if (typeof data.configR === 'number' && data.configR > 0) {
+                            configR = data.configR;
+                        }
+                        if (typeof data.configModulo === 'number' && data.configModulo > 0) {
+                            configModulo = data.configModulo;
+                            configModuloInput.value = configModulo;
+                        } else {
+                            configModulo = null;
+                            configModuloInput.value = '';
+                        }
+                        if (typeof data.modoTren === 'string') {
+                            modoTren = data.modoTren;
+                        }
+
+                        saveToStorage();
+                        saveGearsToStorage();
+                        saveConfigToStorage();
+                        localStorage.setItem('lira_modo', modoTren);
+
+                        renderHistory();
+                        renderGearBadges();
+                        renderGearManager();
+                        configPtInput.value = configPt;
+                        configRInput.value = configR;
+                        ptInput.value = configPt;
+                        toggleBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === modoTren));
+                        limpiarResultados();
+
+                        importBtn.textContent = '✅ Importado';
+                        setTimeout(() => importBtn.textContent = '⬆️ Importar', 1500);
+                    } catch (err) {
+                        alert('Archivo inválido. Asegúrate de usar un respaldo exportado desde esta app.');
+                    }
+                };
+                reader.onerror = function() {
+                    alert('No se pudo leer el archivo.');
+                };
+                reader.readAsText(file);
+            }
+
+            // ----------------------------------------------------
+            // DIAGRAMA GRÁFICO (SVG) DEL TREN DE ENGRANAJES
+            // ----------------------------------------------------
+            function polarPt(cx, cy, r, angle) {
+                return { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
+            }
+
+            // Número de "dientes" dibujados (esquemático, no literal, para que se lea bien)
+            function dientesVisuales(z) {
+                return Math.max(10, Math.min(30, Math.round(z / 4)));
+            }
+
+            // Genera el contorno de un engranaje (path SVG) centrado en cx,cy
+            function gearPathD(cx, cy, rOuter, teeth) {
+                const rInner = rOuter * 0.84;
+                const step = (Math.PI * 2) / teeth;
+                let d = '';
+                for (let i = 0; i < teeth; i++) {
+                    const a0 = i * step;
+                    const a1 = a0 + step * 0.28;
+                    const a2 = a0 + step * 0.52;
+                    const a3 = a0 + step * 0.80;
+                    const p0 = polarPt(cx, cy, rInner, a0);
+                    const p1 = polarPt(cx, cy, rOuter, a1);
+                    const p2 = polarPt(cx, cy, rOuter, a2);
+                    const p3 = polarPt(cx, cy, rInner, a3);
+                    d += (i === 0 ? `M ${p0.x.toFixed(2)} ${p0.y.toFixed(2)} ` : `L ${p0.x.toFixed(2)} ${p0.y.toFixed(2)} `);
+                    d += `L ${p1.x.toFixed(2)} ${p1.y.toFixed(2)} L ${p2.x.toFixed(2)} ${p2.y.toFixed(2)} L ${p3.x.toFixed(2)} ${p3.y.toFixed(2)} `;
+                }
+                d += 'Z';
+                return d;
+            }
+
+            // Resuelve el tema visual actualmente activo ('light' | 'dark'),
+            // resolviendo también el caso 'auto' contra la preferencia del sistema.
+            function temaEfectivo() {
+                if (tema === 'light') return 'light';
+                if (tema === 'dark') return 'dark';
+                return (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) ? 'light' : 'dark';
+            }
+
+            // Paleta de colores inline (no depende de CSS), para que el SVG se
+            // vea igual en pantalla y al exportarlo como archivo independiente
+            function paletaTema() {
+                if (temaEfectivo() === 'light') {
+                    return {
+                        conductorFill: '#dcfce7', conductorStroke: '#22c55e', conductorText: '#166534',
+                        conducidoFill: '#fef3c7', conducidoStroke: '#f59e0b', conducidoText: '#92400e',
+                        hubFill: '#f8fafc', hubStroke: '#94a3b8',
+                        axisText: '#64748b', rotArrow: '#64748b',
+                        shaft: '#8b5cf6', shaftText: '#7c3aed',
+                        chartBarBg: '#e2e8f0', chartText: '#334155', chartBg: '#ffffff'
+                    };
+                }
+                return {
+                    conductorFill: '#16311f', conductorStroke: '#22c55e', conductorText: '#4ade80',
+                    conducidoFill: '#3a2a0f', conducidoStroke: '#f59e0b', conducidoText: '#fbbf24',
+                    hubFill: '#0f172a', hubStroke: '#475569',
+                    axisText: '#64748b', rotArrow: '#94a3b8',
+                    shaft: '#8b5cf6', shaftText: '#a78bfa',
+                    chartBarBg: '#1e293b', chartText: '#cbd5e1', chartBg: '#0f172a'
+                };
+            }
+
+            // Color según el error porcentual (mismos umbrales que el resto de la app)
+            function colorPorError(pct) {
+                if (pct < 0.5) return '#4ade80';
+                if (pct < 1.5) return '#fbbf24';
+                if (pct < 3.0) return '#fb923c';
+                return '#f87171';
+            }
+
+            // Calcula el radio visual (px) de cada rueda según el modo de vista:
+            // - esquemático: proporcional a la raíz cuadrada (legible aunque haya
+            //   mucha diferencia de tamaño entre ruedas)
+            // - escala: proporcional lineal al número de dientes (representa la
+            //   diferencia REAL de diámetro; si hay módulo configurado, se calcula
+            //   en mm reales y luego se escala a píxeles)
+            function calcularRadios(zList, modo) {
+                const unicos = [...new Set(zList)];
+                const radios = {};
+                let infoEscala = { tieneModulo: false };
+
+                if (modo === 'escala') {
+                    const maxZ = Math.max(...unicos);
+                    if (configModulo) {
+                        const maxRmm = configModulo * maxZ / 2;
+                        const pxPerMm = maxRmm > 0 ? 42 / maxRmm : 1;
+                        unicos.forEach(z => { radios[z] = Math.max(6, (configModulo * z / 2) * pxPerMm); });
+                        infoEscala = { tieneModulo: true, pxPerMm: pxPerMm };
+                    } else {
+                        unicos.forEach(z => { radios[z] = Math.max(7, 8 + (z / maxZ) * 42); });
+                    }
+                } else {
+                    unicos.forEach(z => { radios[z] = 11 + Math.sqrt(z) * 2.55; });
+                }
+                return { radios, infoEscala };
+            }
+
+            // Dibuja un engranaje completo (contorno rotable + cubo + número fijo)
+            function drawGear(cx, cy, z, rol, giroHorario, r, duracion, animar, pal) {
+                const teeth = dientesVisuales(z);
+                const d = gearPathD(cx, cy, r, teeth);
+                const esConductor = rol === 'conductor';
+                const fillColor = esConductor ? pal.conductorFill : pal.conducidoFill;
+                const strokeColor = esConductor ? pal.conductorStroke : pal.conducidoStroke;
+                const textColor = esConductor ? pal.conductorText : pal.conducidoText;
+                const fontSize = Math.max(9, Math.min(13, r * 0.34));
+                const dir = giroHorario ? 1 : -1;
+                const flecha = giroHorario ? '↻' : '↺';
+
+                let out = `<g class="gear-rotor">`;
+                out += `<path d="${d}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="1.5"></path>`;
+                out += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(r * 0.22).toFixed(1)}" fill="${pal.hubFill}" stroke="${pal.hubStroke}" stroke-width="1.5"></circle>`;
+                if (animar) {
+                    out += `<animateTransform attributeName="transform" type="rotate" from="0 ${cx.toFixed(1)} ${cy.toFixed(1)}" to="${(dir * 360).toFixed(0)} ${cx.toFixed(1)} ${cy.toFixed(1)}" dur="${Math.max(0.4, duracion).toFixed(2)}s" repeatCount="indefinite"></animateTransform>`;
+                }
+                out += `</g>`;
+                out += `<text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" font-size="${fontSize.toFixed(1)}" font-family="Courier New, monospace" font-weight="700" fill="${textColor}" text-anchor="middle" dominant-baseline="central">${z}</text>`;
+                if (!animar) {
+                    out += `<text x="${(cx + r * 0.72).toFixed(1)}" y="${(cy - r * 0.72).toFixed(1)}" font-size="13" fill="${pal.rotArrow}" text-anchor="middle" dominant-baseline="central">${flecha}</text>`;
+                }
+                return out;
+            }
+
+            // Genera el string SVG completo del tren (sin tocar el DOM). Se usa
+            // tanto para el render en pantalla como para exportar imágenes.
+            function generarSVGTren(mejor, animar) {
+                const cond = mejor.conductores;
+                const condd = mejor.conducidos;
+                const pal = paletaTema();
+                const esSimple = mejor.tipo.includes('Simple');
+                const zList = esSimple ? [cond[0], condd[0]] : [cond[0], condd[0], cond[1], condd[1]];
+                const { radios, infoEscala } = calcularRadios(zList, modoVista);
+                const baseDuracion = 4; // segundos por vuelta del engranaje conductor (Z1), referencia arbitraria
+
+                let svgInner = '';
+                let vbW, vbH;
+                let noteText = '';
+                let scaleNoteText = '';
+
+                if (esSimple) {
+                    const z1 = cond[0], z2 = condd[0];
+                    const r1 = radios[z1], r2 = radios[z2];
+                    const cy = Math.max(r1, r2) + 20;
+                    const cx1 = r1 + 14;
+                    const cx2 = cx1 + r1 + r2 - Math.min(r1, r2) * 0.14;
+
+                    const t1 = baseDuracion;
+                    const t2 = t1 * (z2 / z1);
+
+                    svgInner += drawGear(cx1, cy, z1, 'conductor', true, r1, t1, animar, pal);
+                    svgInner += drawGear(cx2, cy, z2, 'conducido', false, r2, t2, animar, pal);
+
+                    svgInner += `<text x="${cx1.toFixed(1)}" y="${(cy + r1 + 16).toFixed(1)}" font-size="8.5" fill="${pal.axisText}" text-anchor="middle">Eje mesa</text>`;
+                    svgInner += `<text x="${cx2.toFixed(1)}" y="${(cy + r2 + 16).toFixed(1)}" font-size="8.5" fill="${pal.axisText}" text-anchor="middle">Eje divisor</text>`;
+
+                    vbW = cx2 + r2 + 16;
+                    vbH = cy + Math.max(r1, r2) + 32;
+                    noteText = 'Z1 (mesa) engrana directamente con Z2 (divisor).';
+
+                    if (modoVista === 'escala') {
+                        scaleNoteText = infoEscala.tieneModulo
+                            ? `📏 Distancia real entre centros: ≈ ${(configModulo * (z1 + z2) / 2).toFixed(1)} mm (módulo ${configModulo} mm/diente)`
+                            : '📏 Vista a escala real (proporción real de diámetros). Define un módulo en Config para ver distancias en mm.';
+                    }
+                } else {
+                    const z1 = cond[0], z2 = condd[0], z3 = cond[1], z4 = condd[1];
+                    const r1 = radios[z1], r2 = radios[z2], r3 = radios[z3], r4 = radios[z4];
+
+                    const cy1 = Math.max(r1, r2) + 16;
+                    const cx1 = r1 + 14;
+                    const cx2 = cx1 + r1 + r2 - Math.min(r1, r2) * 0.14;
+
+                    const cy2 = cy1 + r2 + r3 + 40;
+                    const cx3 = cx2;
+                    const cx4 = cx3 + r3 + r4 - Math.min(r3, r4) * 0.14;
+
+                    const t1 = baseDuracion;
+                    const t2 = t1 * (z2 / z1);
+                    const t3 = t2; // mismo eje: misma velocidad y sentido
+                    const t4 = t3 * (z4 / z3);
+
+                    svgInner += drawGear(cx1, cy1, z1, 'conductor', true, r1, t1, animar, pal);
+                    svgInner += drawGear(cx2, cy1, z2, 'conducido', false, r2, t2, animar, pal);
+
+                    svgInner += `<line x1="${cx2.toFixed(1)}" y1="${(cy1 + r2 + 4).toFixed(1)}" x2="${cx3.toFixed(1)}" y2="${(cy2 - r3 - 4).toFixed(1)}" stroke="${pal.shaft}" stroke-width="2" stroke-dasharray="3 3"></line>`;
+                    svgInner += `<text x="${(cx2 + 34).toFixed(1)}" y="${((cy1 + cy2) / 2).toFixed(1)}" font-size="8" fill="${pal.shaftText}" text-anchor="middle">mismo eje</text>`;
+                    svgInner += `<text x="${(cx2 + 34).toFixed(1)}" y="${((cy1 + cy2) / 2 + 10).toFixed(1)}" font-size="8" fill="${pal.shaftText}" text-anchor="middle">(solidario)</text>`;
+
+                    svgInner += drawGear(cx3, cy2, z3, 'conductor', false, r3, t3, animar, pal);
+                    svgInner += drawGear(cx4, cy2, z4, 'conducido', true, r4, t4, animar, pal);
+
+                    svgInner += `<text x="${cx1.toFixed(1)}" y="${(cy1 - r1 - 10).toFixed(1)}" font-size="8.5" fill="${pal.axisText}" text-anchor="middle">Eje mesa</text>`;
+                    svgInner += `<text x="${cx4.toFixed(1)}" y="${(cy2 + r4 + 16).toFixed(1)}" font-size="8.5" fill="${pal.axisText}" text-anchor="middle">Eje divisor</text>`;
+
+                    vbW = Math.max(cx2 + r2, cx4 + r4) + 60;
+                    vbH = cy2 + r4 + 30;
+                    noteText = 'Z2 y Z3 van montados y calados en el mismo eje intermedio (giran juntos).';
+
+                    if (modoVista === 'escala') {
+                        scaleNoteText = infoEscala.tieneModulo
+                            ? `📏 Distancias reales: ${(configModulo * (z1 + z2) / 2).toFixed(1)} mm (Z1-Z2) · ${(configModulo * (z3 + z4) / 2).toFixed(1)} mm (Z3-Z4) — módulo ${configModulo} mm/diente`
+                            : '📏 Vista a escala real (proporción real de diámetros). Define un módulo en Config para ver distancias en mm.';
+                    }
+                }
+
+                const svgString = `<svg viewBox="0 0 ${vbW.toFixed(0)} ${vbH.toFixed(0)}" xmlns="http://www.w3.org/2000/svg">${svgInner}</svg>`;
+                return { svgString, noteText, scaleNoteText };
+            }
+
+            function renderTrainVisual(mejor) {
+                const { svgString, noteText, scaleNoteText } = generarSVGTren(mejor, animando);
+                trainVisualWrap.innerHTML = svgString;
+                trainVisualNote.textContent = noteText;
+                if (modoVista === 'escala') {
+                    scaleNote.textContent = scaleNoteText;
+                    scaleNote.style.display = 'block';
+                } else {
+                    scaleNote.style.display = 'none';
+                    scaleNote.textContent = '';
+                }
+            }
+
+            // ----------------------------------------------------
+            // ANIMACIÓN Y MODO DE VISTA (esquemático / escala real)
+            // ----------------------------------------------------
+            function toggleAnimacion() {
+                animando = !animando;
+                animToggleBtn.textContent = animando ? '⏸️' : '▶️';
+                animToggleBtn.classList.toggle('active', animando);
+                animToggleBtn.title = animando ? 'Pausar giro' : 'Animar giro';
+                if (ultimoMejor) renderTrainVisual(ultimoMejor);
+            }
+
+            function toggleModoVista() {
+                modoVista = modoVista === 'esquematico' ? 'escala' : 'esquematico';
+                scaleToggleBtn.textContent = modoVista === 'escala' ? '📐 Esquema' : '📐 Escala';
+                scaleToggleBtn.classList.toggle('active', modoVista === 'escala');
+                if (ultimoMejor) renderTrainVisual(ultimoMejor);
+            }
+
+            // ----------------------------------------------------
+            // COMPARATIVA GRÁFICA SIMPLE VS COMPUESTO (barras)
+            // ----------------------------------------------------
+            function renderComparativa(simple, compuesto, mejor) {
+                if (!simple || !compuesto) {
+                    comparisonChartWrap.innerHTML = '';
+                    return;
+                }
+                const pal = paletaTema();
+                const maxPct = Math.max(simple.errorPct, compuesto.errorPct, 0.5) * 1.15;
+                const w = 300, barH = 26, gap = 18, leftPad = 78, rightPad = 52, topPad = 12;
+                const chartW = w - leftPad - rightPad;
+                const h = topPad * 2 + barH * 2 + gap + 12;
+                const simpleEsRecomendado = mejor.tipo.includes('Simple');
+
+                function barra(y, label, pct, recomendado) {
+                    const bw = Math.max(3, (pct / maxPct) * chartW);
+                    const color = colorPorError(pct);
+                    let out = `<text x="${leftPad - 8}" y="${(y + barH / 2).toFixed(1)}" font-size="11" fill="${pal.chartText}" text-anchor="end" dominant-baseline="central">${label}</text>`;
+                    out += `<rect x="${leftPad}" y="${y}" width="${chartW.toFixed(1)}" height="${barH}" rx="5" fill="${pal.chartBarBg}"></rect>`;
+                    out += `<rect x="${leftPad}" y="${y}" width="${bw.toFixed(1)}" height="${barH}" rx="5" fill="${color}"></rect>`;
+                    out += `<text x="${(leftPad + chartW + 8).toFixed(1)}" y="${(y + barH / 2).toFixed(1)}" font-size="11" font-weight="700" fill="${color}" dominant-baseline="central">${pct.toFixed(2)}%</text>`;
+                    if (recomendado) {
+                        out += `<text x="${leftPad}" y="${(y + barH + 11).toFixed(1)}" font-size="8" fill="#60a5fa">✓ opción recomendada</text>`;
+                    }
+                    return out;
+                }
+
+                let inner = '';
+                inner += barra(topPad, 'Simple', simple.errorPct, simpleEsRecomendado);
+                inner += barra(topPad + barH + gap, 'Compuesto', compuesto.errorPct, !simpleEsRecomendado);
+
+                comparisonChartWrap.innerHTML = `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
+            }
+
+            // ----------------------------------------------------
+            // EXPORTAR DIAGRAMA COMO IMAGEN (PNG / SVG)
+            // ----------------------------------------------------
+            function exportarSVG() {
+                if (!ultimoMejor) return;
+                const pal = paletaTema();
+                const { svgString } = generarSVGTren(ultimoMejor, false);
+                const svgConFondo = svgString.replace('<svg ', `<svg style="background:${pal.chartBg}" `);
+
+                try {
+                    const blob = new Blob([svgConFondo], { type: 'image/svg+xml' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `tren_engranajes_${Date.now()}.svg`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+                    exportSvgBtn.textContent = '✅ SVG';
+                    setTimeout(() => exportSvgBtn.textContent = '🗂️ SVG', 1500);
+                } catch (e) {
+                    alert('No se pudo exportar el SVG en este navegador.');
+                }
+            }
+
+            function exportarPNG() {
+                if (!ultimoMejor) return;
+                const pal = paletaTema();
+                const { svgString } = generarSVGTren(ultimoMejor, false);
+                const svgConFondo = svgString.replace('<svg ', `<svg style="background:${pal.chartBg}" `);
+                const vbMatch = svgString.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/);
+                const vw = vbMatch ? parseFloat(vbMatch[1]) : 320;
+                const vh = vbMatch ? parseFloat(vbMatch[2]) : 200;
+
+                try {
+                    const svgBlob = new Blob([svgConFondo], { type: 'image/svg+xml;charset=utf-8' });
+                    const url = URL.createObjectURL(svgBlob);
+                    const img = new Image();
+                    img.onload = function() {
+                        const scale = 3; // resolución extra para imprimir
+                        const canvas = document.createElement('canvas');
+                        canvas.width = vw * scale;
+                        canvas.height = vh * scale;
+                        const ctx = canvas.getContext('2d');
+                        ctx.fillStyle = pal.chartBg;
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        URL.revokeObjectURL(url);
+
+                        canvas.toBlob(function(blob) {
+                            if (!blob) { alert('No se pudo generar la imagen PNG.'); return; }
+                            const pngUrl = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = pngUrl;
+                            a.download = `tren_engranajes_${Date.now()}.png`;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            setTimeout(() => URL.revokeObjectURL(pngUrl), 1000);
+                            exportPngBtn.textContent = '✅ PNG';
+                            setTimeout(() => exportPngBtn.textContent = '🖼️ PNG', 1500);
+                        }, 'image/png');
+                    };
+                    img.onerror = function() {
+                        URL.revokeObjectURL(url);
+                        alert('No se pudo generar la imagen PNG en este navegador.');
+                    };
+                    img.src = url;
+                } catch (e) {
+                    alert('No se pudo exportar el PNG en este navegador.');
+                }
+            }
+
+            // ----------------------------------------------------
+            // RENDERIZAR RESULTADOS (actualizado con configR)
+            // ----------------------------------------------------
+            function renderResultados(Tobj, resultado) {
+                const { simple, compuesto, mejor } = resultado;
+
+                resultsContainer.classList.add('visible');
+
+                resultT.textContent = Tobj.toFixed(6);
+                resultType.textContent = mejor.tipo;
+
+                // Diagrama
+                let html = '';
+                const cond = mejor.conductores;
+                const condd = mejor.conducidos;
+
+                if (mejor.tipo.includes('Simple')) {
+                    html =
+                        `
+                                <span class="gear conductor">${cond[0]}</span>
+                                <span class="arrow">→</span>
+                                <span class="gear conducido">${condd[0]}</span>
+                            `;
+                } else {
+                    html =
+                        `
+                                <span class="gear conductor">${cond[0]}</span>
+                                <span class="arrow">→</span>
+                                <span class="gear conducido">${condd[0]}</span>
+                                <span class="solid-arrow">⏤⏤⏤</span>
+                                <span class="gear conductor">${cond[1]}</span>
+                                <span class="arrow">→</span>
+                                <span class="gear conducido">${condd[1]}</span>
+                            `;
+                }
+
+                // La sugerencia de rueda loca ahora se calcula de forma inteligente
+                // (ver renderAvisoInterferencia) según la proporción real entre las
+                // ruedas que deben engranar, en vez de un valor fijo.
+
+                trainDiagram.innerHTML = html;
+                ultimoMejor = mejor;
+                ultimoSimple = simple;
+                ultimoCompuesto = compuesto;
+                renderTrainVisual(mejor);
+                renderAvisoInterferencia(mejor);
+                renderComparativa(simple, compuesto, mejor);
+
+                // Errores
+                errorAbs.textContent = mejor.errorAbs.toFixed(6);
+                const pct = mejor.errorPct;
+                errorPct.textContent = pct.toFixed(3) + ' %';
+                const errorEl = errorPct;
+                if (pct < 0.5) errorEl.style.color = '#4ade80';
+                else if (pct < 1.5) errorEl.style.color = '#fbbf24';
+                else if (pct < 3.0) errorEl.style.color = '#fb923c';
+                else errorEl.style.color = '#f87171';
+
+                // Status badge
+                let badgeText = '';
+                let badgeClass = '';
+                if (pct < 0.5) {
+                    badgeText = '✅ EXCELENTE · Error < 0.5 % · Ideal para precisión';
+                    badgeClass = 'excellent';
+                } else if (pct < 1.5) {
+                    badgeText = '👍 MUY BUENO · Error < 1.5 % · Aceptable para la mayoría';
+                    badgeClass = 'good';
+                } else if (pct < 3.0) {
+                    badgeText = '⚠️ ACEPTABLE · Error < 3 % · Válido para transmisión de potencia';
+                    badgeClass = 'acceptable';
+                } else {
+                    badgeText = '❌ PRECAUCIÓN · Error > 3 % · Considera conseguir más engranajes';
+                    badgeClass = 'poor';
+                }
+                statusBadge.textContent = badgeText;
+                statusBadge.className = 'status-badge ' + badgeClass;
+
+                // Comparativa
+                if (showAllCheck.checked) {
+                    compSimple.textContent = simple.relacion.toFixed(6) + ' (' + simple.errorPct.toFixed(2) + '%)';
+                    compCompuesto.textContent = compuesto.relacion.toFixed(6) + ' (' + compuesto.errorPct.toFixed(2) + '%)';
+                } else {
+                    compSimple.textContent = 'Oculto';
+                    compCompuesto.textContent = 'Oculto';
+                }
+
+                if (mejor.esSimple) {
+                    compRecomendado.textContent = '✅ Tren Simple (menor error)';
+                } else {
+                    compRecomendado.textContent = '✅ Tren Compuesto (menor error)';
+                }
+
+                // Ángulo de inclinación (usando configR en lugar de 40)
+                const ph = parseFloat(phInput.value);
+                const pt = parseFloat(ptInput.value) || configPt;
+
+                if (ph && pt && !isNaN(ph) && !isNaN(pt) && ph > 0 && pt > 0) {
+                    const Treal = mejor.relacion;
+                    // Usar configR en lugar del 40 fijo
+                    const PhReal = (configR * pt) / Treal;
+                    const tanAlpha = (Math.PI * pt * configR) / (Treal * ph);
+                    const alphaRad = Math.atan(tanAlpha);
+                    const alphaDeg = alphaRad * (180 / Math.PI);
+
+                    angleSection.classList.remove('hidden');
+                    angleValue.textContent = alphaDeg.toFixed(2) + '°';
+                    phRealValue.textContent = PhReal.toFixed(3) + ' mm';
+
+                    // Sugerencia de inclinación
+                    const numRuedas = mejor.numRuedas || (mejor.tipo.includes('Simple') ? 2 : 4);
+                    if (numRuedas % 2 === 0) {
+                        angleHint.textContent = '💡 Con ' + numRuedas + ' ruedas (par), el divisor gira en el mismo sentido que el husillo. Inclina la mesa en sentido ANTIHORARIO para hélice DERECHA, o HORARIO para IZQUIERDA.';
+                    } else {
+                        angleHint.textContent = '💡 Con ' + numRuedas + ' ruedas (impar), el divisor gira en sentido contrario. Inclina la mesa en sentido HORARIO para hélice DERECHA, o ANTIHORARIO para IZQUIERDA.';
+                    }
+
+                    // Mostrar también los parámetros usados
+                    const paramInfo = document.createElement('div');
+                    paramInfo.style.cssText =
+                        'text-align:center;font-size:9px;color:#64748b;margin-top:4px;';
+                    paramInfo.textContent = `R = ${configR} · Pt = ${pt.toFixed(3)} mm`;
+                    const existingInfo = angleSection.querySelector('.param-info');
+                    if (existingInfo) existingInfo.remove();
+                    angleSection.appendChild(paramInfo);
+                } else {
+                    angleSection.classList.add('hidden');
+                }
+
+                // Botones
+                calcBtn.style.display = 'none';
+                clearBtn.style.display = 'flex';
+                saveBtn.style.display = 'flex';
+                copyBtn.style.display = 'flex';
+
+                // Guardar datos
+                resultsContainer.dataset.tobj = Tobj;
+                resultsContainer.dataset.resultado = JSON.stringify(mejor);
+                resultsContainer.dataset.simple = JSON.stringify(simple);
+                resultsContainer.dataset.compuesto = JSON.stringify(compuesto);
+
+                if (autoSave) {
+                    guardarResultado();
+                }
+            }
+
+            function limpiarResultados() {
+                resultsContainer.classList.remove('visible');
+                calcBtn.style.display = 'flex';
+                clearBtn.style.display = 'none';
+                saveBtn.style.display = 'none';
+                copyBtn.style.display = 'none';
+                angleSection.classList.add('hidden');
+                interferenceWarning.classList.remove('visible');
+                interferenceWarning.innerHTML = '';
+                trainVisualWrap.innerHTML = '';
+                trainVisualNote.textContent = '';
+                scaleNote.textContent = '';
+                scaleNote.style.display = 'none';
+                comparisonChartWrap.innerHTML = '';
+                ultimoMejor = null;
+                ultimoSimple = null;
+                ultimoCompuesto = null;
+                tInput.focus();
+            }
+
+            // ----------------------------------------------------
+            // FUNCIÓN PRINCIPAL CALCULAR
+            // ----------------------------------------------------
+            function calcular() {
+                const raw = tInput.value.trim();
+                if (raw === '') {
+                    tInput.style.borderColor = '#ef4444';
+                    setTimeout(() => tInput.style.borderColor = '#334155', 300);
+                    return;
+                }
+                const Tobj = parseFloat(raw);
+                if (isNaN(Tobj) || Tobj <= 0) {
+                    tInput.style.borderColor = '#ef4444';
+                    setTimeout(() => tInput.style.borderColor = '#334155', 300);
+                    return;
+                }
+
+                const resultado = buscarMejor(Tobj);
+                renderResultados(Tobj, resultado);
+            }
+
+            // ----------------------------------------------------
+            // GUARDAR EN HISTORIAL
+            // ----------------------------------------------------
+            function guardarResultado() {
+                const tobj = parseFloat(resultsContainer.dataset.tobj);
+                if (!tobj || isNaN(tobj)) return;
+
+                const mejor = JSON.parse(resultsContainer.dataset.resultado || '{}');
+                if (!mejor.relacion) return;
+
+                const entry = {
+                    id: Date.now(),
+                    T: tobj,
+                    relacion: mejor.relacion,
+                    errorPct: mejor.errorPct,
+                    tipo: mejor.tipo,
+                    conductores: mejor.conductores,
+                    conducidos: mejor.conducidos,
+                    configR: configR,
+                    configPt: configPt,
+                    fecha: new Date().toLocaleString()
+                };
+
+                historial.unshift(entry);
+                if (historial.length > 50) historial.pop();
+
+                saveToStorage();
+                renderHistory();
+
+                saveBtn.textContent = '✅ Guardado';
+                setTimeout(() => saveBtn.textContent = '💾 Guardar', 1500);
+            }
+
+            function borrarHistorial() {
+                if (historial.length === 0) return;
+                if (confirm('¿Borrar todo el historial?')) {
+                    historial = [];
+                    saveToStorage();
+                    renderHistory();
+                }
+            }
+
+            function renderHistory() {
+                if (historial.length === 0) {
+                    historyList.innerHTML = '<div class="history-empty">No hay cálculos guardados</div>';
+                    return;
+                }
+
+                let html = '';
+                historial.forEach((entry, index) => {
+                    const pct = entry.errorPct;
+                    let color = '#4ade80';
+                    if (pct > 3) color = '#f87171';
+                    else if (pct > 1.5) color = '#fbbf24';
+
+                    const condStr = entry.conductores.join('/');
+                    const conddStr = entry.conducidos.join('/');
+
+                    html += `
+                            <div class="history-item">
+                                <div class="left">
+                                    <span class="t-val">T = ${entry.T.toFixed(6)}</span>
+                                    <span class="detail">${entry.tipo} · ${condStr} → ${conddStr}</span>
+                                    <span class="detail" style="font-size:8px;">R=${entry.configR || 40} · Pt=${(entry.configPt || 6.35).toFixed(3)}mm</span>
+                                </div>
+                                <div class="right">
+                                    <span class="error-pct" style="color:${color}">${pct.toFixed(2)}%</span>
+                                    <button class="btn-secondary" style="padding:4px 8px;font-size:10px;width:auto;" onclick="window.cargarHistorial(${index})">📂</button>
+                                </div>
+                            </div>
+                        `;
+                });
+                historyList.innerHTML = html;
+            }
+
+            window.cargarHistorial = function(index) {
+                const entry = historial[index];
+                if (!entry) return;
+
+                // Cargar la configuración guardada
+                if (entry.configR) {
+                    configR = entry.configR;
+                    configRInput.value = configR;
+                    saveConfigToStorage();
+                }
+                if (entry.configPt) {
+                    configPt = entry.configPt;
+                    configPtInput.value = configPt;
+                    ptInput.value = configPt;
+                    saveConfigToStorage();
+                }
+
+                tabBtns.forEach(b => b.classList.remove('active'));
+                document.querySelector('[data-tab="calculadora"]').classList.add('active');
+                Object.keys(tabContents).forEach(key => {
+                    tabContents[key].classList.toggle('active', key === 'calculadora');
+                });
+
+                tInput.value = entry.T;
+                setTimeout(() => calcBtn.click(), 200);
+            };
+
+            // ----------------------------------------------------
+            // GESTIÓN DE ENGRANAJES (igual que antes)
+            // ----------------------------------------------------
+            function renderGearBadges() {
+                let html = '';
+                engranajes.forEach(g => {
+                    const highlight = (g === 55) ? ' highlight' : '';
+                    html += `<span class="gear-badge${highlight}">${g}</span>`;
+                });
+                gearBadges.innerHTML = html;
+            }
+
+            function renderGearManager() {
+                let html = '';
+                engranajes.forEach(g => {
+                    const highlight = (g === 55) ? ' highlight' : '';
+                    html += `
+                            <span class="gear-badge added${highlight}" style="cursor:pointer;" onclick="window.eliminarEngranaje(${g})">
+                                ${g} ✕
+                            </span>
+                        `;
+                });
+                gearManagerList.innerHTML = html || '<span style="color:#64748b;font-size:12px;">No hay engranajes</span>';
+            }
+
+            window.eliminarEngranaje = function(valor) {
+                if (engranajes.length <= 4) {
+                    alert('Mínimo 4 engranajes necesarios');
+                    return;
+                }
+                const idx = engranajes.indexOf(valor);
+                if (idx !== -1) {
+                    engranajes.splice(idx, 1);
+                    engranajes.sort((a, b) => a - b);
+                    saveGearsToStorage();
+                    renderGearBadges();
+                    renderGearManager();
+                    limpiarResultados();
+                }
+            };
+
+            function añadirEngranaje() {
+                const val = parseInt(newGearInput.value.trim());
+                if (isNaN(val) || val < 10 || val > 200) {
+                    alert('Introduce un número entre 10 y 200');
+                    return;
+                }
+                if (engranajes.includes(val)) {
+                    alert('Este engranaje ya existe');
+                    return;
+                }
+                engranajes.push(val);
+                engranajes.sort((a, b) => a - b);
+                saveGearsToStorage();
+                renderGearBadges();
+                renderGearManager();
+                newGearInput.value = '';
+                limpiarResultados();
+            }
+
+            function resetearEngranajes() {
+                if (confirm('¿Restaurar engranajes por defecto (incluye 55)?')) {
+                    engranajes = [...DEFAULT_GEARS];
+                    saveGearsToStorage();
+                    renderGearBadges();
+                    renderGearManager();
+                    limpiarResultados();
+                }
+            }
+
+            // ----------------------------------------------------
+            // ALMACENAMIENTO LOCAL
+            // ----------------------------------------------------
+            function saveToStorage() {
+                try {
+                    localStorage.setItem('lira_historial', JSON.stringify(historial));
+                } catch (e) { /* ignore */ }
+            }
+
+            function loadFromStorage() {
+                try {
+                    const data = localStorage.getItem('lira_historial');
+                    if (data) {
+                        historial = JSON.parse(data);
+                        renderHistory();
+                    }
+
+                    const gears = localStorage.getItem('lira_engranajes');
+                    if (gears) {
+                        const parsed = JSON.parse(gears);
+                        if (Array.isArray(parsed) && parsed.length >= 4) {
+                            engranajes = parsed;
+                            renderGearBadges();
+                            renderGearManager();
+                        }
+                    }
+
+                    const savedMode = localStorage.getItem('lira_modo');
+                    if (savedMode) {
+                        modoTren = savedMode;
+                        toggleBtns.forEach(b => {
+                            b.classList.toggle('active', b.dataset.mode === savedMode);
+                        });
+                    }
+
+                    const savedAuto = localStorage.getItem('lira_autosave');
+                    if (savedAuto === 'true') {
+                        autoSave = true;
+                        autoSaveCheck.checked = true;
+                    }
+
+                    const savedLoca = localStorage.getItem('lira_showLoca');
+                    if (savedLoca === 'false') {
+                        showLoca = false;
+                        showLocaCheck.checked = false;
+                    }
+                } catch (e) { /* ignore */ }
+            }
+
+            function saveGearsToStorage() {
+                try {
+                    localStorage.setItem('lira_engranajes', JSON.stringify(engranajes));
+                } catch (e) { /* ignore */ }
+            }
+
+            // Guardar preferencias
+            document.addEventListener('DOMContentLoaded', function() {
+                autoSaveCheck.addEventListener('change', function() {
+                    localStorage.setItem('lira_autosave', this.checked.toString());
+                });
+                showLocaCheck.addEventListener('change', function() {
+                    localStorage.setItem('lira_showLoca', this.checked.toString());
+                    showLoca = this.checked;
+                });
+                showAllCheck.addEventListener('change', function() {
+                    localStorage.setItem('lira_showAll', this.checked.toString());
+                });
+                const savedShowAll = localStorage.getItem('lira_showAll');
+                if (savedShowAll === 'false') {
+                    showAllCheck.checked = false;
+                }
+            });
+
+            // ----------------------------------------------------
+            // INICIALIZAR
+            // ----------------------------------------------------
+            init();
+
+            // ----------------------------------------------------
+            // PWA: registrar service worker (si está disponible en el
+            // hosting; no rompe nada si sw.js no existe en este origen)
+            // ----------------------------------------------------
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                    navigator.serviceWorker.register('./sw.js').catch(function() {
+                        // Silencioso: si no se subió sw.js junto al HTML,
+                        // la app sigue funcionando normalmente en línea.
+                    });
+                });
+            }
+
+        })();
+    </script>
+</body>
+</html>
